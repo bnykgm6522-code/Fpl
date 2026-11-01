@@ -266,66 +266,99 @@ function recCard(p,tag){
  </div>`;
 }
 
-function buildSquad(players,budget){
- const quotas={1:2,2:5,3:5,4:3};
- const squad=[];
- const club={};
- let spent=0;
+function buildSquad(players, budget) {
+  const quotas = { 1: 2, 2: 5, 3: 5, 4: 3 };
+  const squad = [];
+  const club = {};
+  const positions = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  let spent = 0;
 
- // بناء تشكيلة قانونية منخفضة التكلفة أولاً
- for(const pos of [1,2,3,4]){
-  const pool=players.filter(p=>p.element_type===pos)
-   .sort((a,b)=>a.now_cost-b.now_cost||b.expected-a.expected);
+  const maxBudget = Math.floor(budget * 10);
 
-  for(let i=0;i<quotas[pos];i++){
-   const pick=pool.find(p=>
-    !squad.some(x=>x.id===p.id)&&
-    (club[p.team]||0)<3&&
-    spent+p.now_cost<=budget*10
-   );
-
-   if(!pick){
-    throw new Error("تعذّر تكوين تشكيلة قانونية ضمن ميزانيتك. قد تكون الميزانية منخفضة أو بيانات اللاعبين ناقصة.");
-   }
-
-   squad.push(pick);
-   spent+=pick.now_cost;
-   club[pick.team]=(club[pick.team]||0)+1;
-  }
- }
-
- // تحسين التشكيلة باستبدال اللاعبين ببدائل أعلى توقعاً
- for(let pass=0;pass<4;pass++){
-  let changed=false;
-
-  for(const old of [...squad]){
-   const options=players.filter(p=>
-    p.element_type===old.element_type&&
-    !squad.some(x=>x.id===p.id)&&
-    p.expected>old.expected+.02
-   ).sort((a,b)=>
-    (b.expected-old.expected)/(Math.max(1,b.now_cost-old.now_cost))-
-    (a.expected-old.expected)/(Math.max(1,a.now_cost-old.now_cost))
-   );
-
-   for(const p of options){
-    const count=(club[p.team]||0)+(p.team===old.team?0:1);
-
-    if(count>3||spent-old.now_cost+p.now_cost>budget*10)continue;
-
-    squad[squad.indexOf(old)]=p;
-    spent+=p.now_cost-old.now_cost;
-    club[old.team]--;
-    club[p.team]=(club[p.team]||0)+1;
-    changed=true;
-    break;
-   }
+  if (!Number.isFinite(maxBudget) || maxBudget <= 0) {
+    throw new Error("لم نتمكن من قراءة ميزانية فريقك. أعد إدخال رقم الفريق.");
   }
 
-  if(!changed)break;
- }
+  const pools = {
+    1: players.filter(p => p.element_type === 1),
+    2: players.filter(p => p.element_type === 2),
+    3: players.filter(p => p.element_type === 3),
+    4: players.filter(p => p.element_type === 4)
+  };
 
- return {squad,spent};
+  for (const pos of [1, 2, 3, 4]) {
+    if (pools[pos].length < quotas[pos]) {
+      throw new Error("بيانات اللاعبين غير مكتملة للمركز: " + pos);
+    }
+  }
+
+  // اختيار أرخص اللاعبين مع توزيع الاختيار بين المراكز
+  while (squad.length < 15) {
+    const candidates = [];
+
+    for (const pos of [1, 2, 3, 4]) {
+      if (positions[pos] >= quotas[pos]) continue;
+
+      for (const p of pools[pos]) {
+        if (squad.some(x => x.id === p.id)) continue;
+        if ((club[p.team] || 0) >= 3) continue;
+        if (spent + Number(p.now_cost) > maxBudget) continue;
+
+        candidates.push(p);
+      }
+    }
+
+    if (!candidates.length) {
+      throw new Error(
+        "تعذّر إكمال التشكيلة ضمن الميزانية. الميزانية المتاحة: " +
+        (maxBudget / 10).toFixed(1) + " مليون."
+      );
+    }
+
+    candidates.sort((a, b) =>
+      a.now_cost - b.now_cost ||
+      b.expected - a.expected
+    );
+
+    const pick = candidates[0];
+
+    squad.push(pick);
+    spent += Number(pick.now_cost);
+    positions[pick.element_type]++;
+    club[pick.team] = (club[pick.team] || 0) + 1;
+  }
+
+  // تحسين اللاعبين دون تجاوز الميزانية أو قيود الأندية
+  for (let pass = 0; pass < 5; pass++) {
+    let changed = false;
+
+    for (let i = 0; i < squad.length; i++) {
+      const old = squad[i];
+
+      const options = pools[old.element_type]
+        .filter(p =>
+          !squad.some((x, index) => index !== i && x.id === p.id) &&
+          p.expected > old.expected &&
+          spent - old.now_cost + p.now_cost <= maxBudget &&
+          (club[p.team] || 0) + (p.team === old.team ? 0 : 1) <= 3
+        )
+        .sort((a, b) => b.expected - a.expected);
+
+      if (options.length) {
+        const replacement = options[0];
+
+        spent += replacement.now_cost - old.now_cost;
+        club[old.team]--;
+        club[replacement.team] = (club[replacement.team] || 0) + 1;
+        squad[i] = replacement;
+        changed = true;
+      }
+    }
+
+    if (!changed) break;
+  }
+
+  return { squad, spent };
 }
 
 function bestStartingXI(squad){
