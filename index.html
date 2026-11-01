@@ -1,0 +1,427 @@
+
+
+<!DOCTYPE html>
+
+<html lang="ar" dir="rtl">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>FPL Tracker | فانتازي بريميرليغ</title>
+
+<style>
+
+:root {
+
+  --bg:#071b16; --panel:#102a22; --green:#00e69a;
+
+  --muted:#9ab5aa; --white:#f3fff9; --border:#254438;
+
+}
+
+* {box-sizing:border-box}
+
+body {
+
+  margin:0; background:var(--bg); color:var(--white);
+
+  font-family:Arial,Tahoma,sans-serif; padding:18px;
+
+}
+
+.container {max-width:850px;margin:auto}
+
+header {text-align:center;padding:22px 0}
+
+header h1 {color:var(--green);margin:0 0 8px;font-size:30px}
+
+header p {color:var(--muted);margin:0}
+
+.panel,.stat,.player {
+
+  background:var(--panel);border:1px solid var(--border);
+
+  border-radius:14px;padding:15px;
+
+}
+
+.panel {margin-bottom:16px}
+
+.controls {display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+label {display:block;color:var(--muted);font-size:13px;margin-bottom:7px}
+
+input {
+
+  width:100%;padding:13px;border-radius:9px;border:1px solid var(--border);
+
+  background:#071b16;color:white;font-size:16px;
+
+}
+
+button {
+
+  width:100%;padding:14px;border:0;border-radius:10px;
+
+  background:var(--green);color:#06251b;font-weight:bold;
+
+  font-size:16px;margin-top:12px;cursor:pointer;
+
+}
+
+button:disabled {opacity:.6}
+
+.stats {display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+
+.stat {text-align:center}
+
+.stat small {color:var(--muted)}
+
+.stat strong {display:block;font-size:24px;color:var(--green);margin-top:7px}
+
+.section-title {color:var(--green);margin:20px 0 12px}
+
+.pitch {
+
+  background:linear-gradient(150deg,#176b42,#0b422d);
+
+  border:2px solid #4a9b69;border-radius:15px;padding:18px 10px;
+
+}
+
+.lineup {display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:12px 0 22px}
+
+.player {
+
+  width:105px;max-width:30%;padding:9px 5px;text-align:center;
+
+  background:#092a20;border-color:#75b78c;
+
+}
+
+.player .shirt {font-size:24px}
+
+.player b {display:block;font-size:12px;margin:5px 0}
+
+.player small {color:#b8d9c6}
+
+.player .points {color:#ffe28a;font-weight:bold;margin-top:5px}
+
+.bench {display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+
+.bench .player {width:auto;max-width:none}
+
+.notice,.error {padding:12px;border-radius:10px;margin:12px 0}
+
+.notice {background:#163629;color:#b9e8d0}
+
+.error {background:#4b201e;color:#ffd1cc}
+
+.hidden {display:none}
+
+footer {text-align:center;color:var(--muted);font-size:12px;margin:25px 0}
+
+@media(max-width:480px) {
+
+ body {padding:12px}
+
+ .controls {grid-template-columns:1fr 1fr}
+
+ .player {width:85px}
+
+ .bench {grid-template-columns:repeat(2,1fr)}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+
+  <h1>⚽ FPL TRACKER</h1>
+
+  <p>لوحة متابعة فريقك في فانتازي الدوري الإنجليزي</p>
+
+</header>
+
+<div class="panel">
+
+  <div class="controls">
+
+    <div>
+
+      <label for="entry">رقم الفريق (Entry ID)</label>
+
+      <input id="entry" type="number" value="11198381">
+
+    </div>
+
+    <div>
+
+      <label for="gameweek">رقم الجولة</label>
+
+      <input id="gameweek" type="number" min="1" max="38" value="9">
+
+    </div>
+
+  </div>
+
+  <button id="loadBtn" onclick="loadTeam()">عرض بيانات الفريق</button>
+
+  <div id="message"></div>
+
+</div>
+
+<div id="results" class="hidden">
+
+  <div class="stats">
+
+    <div class="stat"><small>نقاط الجولة</small><strong id="gwPoints">-</strong></div>
+
+    <div class="stat"><small>نقاط الموسم</small><strong id="totalPoints">-</strong></div>
+
+    <div class="stat"><small>الترتيب العام</small><strong id="overallRank">-</strong></div>
+
+    <div class="stat"><small>ترتيب الجولة</small><strong id="gwRank">-</strong></div>
+
+  </div>
+
+  <div class="panel">
+
+    <h3 class="section-title" id="teamName">الفريق</h3>
+
+    <div id="teamInfo"></div>
+
+    <div id="captainInfo"></div>
+
+  </div>
+
+  <h3 class="section-title">التشكيلة الأساسية</h3>
+
+  <div class="pitch" id="pitch"></div>
+
+  <h3 class="section-title">دكة الاحتياط</h3>
+
+  <div class="bench" id="bench"></div>
+
+</div>
+
+<footer>
+
+  FPL Tracker — مشروع مستقل غير تابع رسمياً للدوري الإنجليزي أو Fantasy Premier League
+
+</footer>
+
+</div>
+
+<script>
+
+const API = "https://fantasy.premierleague.com/api/";
+
+async function getJSON(url) {
+
+  const response = await fetch(url);
+
+  if (!response.ok) throw new Error("تعذر جلب البيانات. حاول مرة أخرى.");
+
+  return response.json();
+
+}
+
+function showMessage(text, error=false) {
+
+  const box = document.getElementById("message");
+
+  box.className = error ? "error" : "notice";
+
+  box.textContent = text;
+
+}
+
+function playerCard(player, element, points, captain=false) {
+
+  const name = element.web_name || "لاعب";
+
+  const position = ({1:"حارس",2:"دفاع",3:"وسط",4:"هجوم"})[element.element_type] || "";
+
+  const multiplier = player.multiplier || 1;
+
+  const score = points * multiplier;
+
+  return `
+
+    <div class="player">
+
+      <div class="shirt">👕</div>
+
+      <b>${name}</b>
+
+      <small>${position}</small>
+
+      ${captain ? `<small>⭐ ${player.is_captain ? "C" : "VC"}</small>` : ""}
+
+      <div class="points">${score} نقطة</div>
+
+    </div>`;
+
+}
+
+async function loadTeam() {
+
+  const entry = document.getElementById("entry").value.trim();
+
+  const gw = Number(document.getElementById("gameweek").value);
+
+  const btn = document.getElementById("loadBtn");
+
+  const results = document.getElementById("results");
+
+  if (!entry || !Number.isInteger(gw) || gw < 1 || gw > 38) {
+
+    showMessage("تأكد من رقم الفريق ورقم الجولة.", true);
+
+    return;
+
+  }
+
+  btn.disabled = true;
+
+  btn.textContent = "جاري تحميل البيانات...";
+
+  results.classList.add("hidden");
+
+  showMessage("جاري الاتصال بخوادم فانتازي...");
+
+  try {
+
+    const [team, picksData, bootstrap, live] = await Promise.all([
+
+      getJSON(`${API}entry/${entry}/`),
+
+      getJSON(`${API}entry/${entry}/event/${gw}/picks/`),
+
+      getJSON(`${API}bootstrap-static/`),
+
+      getJSON(`${API}event/${gw}/live/`)
+
+    ]);
+
+    const elements = Object.fromEntries(
+
+      bootstrap.elements.map(p => [p.id, p])
+
+    );
+
+    const livePlayers = Object.fromEntries(
+
+      live.elements.map(p => [p.id, p.stats])
+
+    );
+
+    const picks = picksData.picks;
+
+    const starters = picks.filter(p => p.position <= 11);
+
+    const substitutes = picks.filter(p => p.position > 11);
+
+    const captain = picks.find(p => p.is_captain);
+
+    const vice = picks.find(p => p.is_vice_captain);
+
+    const gwPoints = picksData.entry_history.points;
+
+    document.getElementById("gwPoints").textContent = gwPoints;
+
+    document.getElementById("totalPoints").textContent = team.summary_overall_points.toLocaleString("en");
+
+    document.getElementById("overallRank").textContent = team.summary_overall_rank.toLocaleString("en");
+
+    document.getElementById("gwRank").textContent = picksData.entry_history.rank.toLocaleString("en");
+
+    document.getElementById("teamName").textContent = team.name;
+
+    document.getElementById("teamInfo").textContent =
+
+      `${team.player_first_name} ${team.player_last_name} — ${team.player_region_name || ""}`;
+
+    const chip = picksData.active_chip || "لا توجد";
+
+    document.getElementById("captainInfo").textContent =
+
+      `الكابتن: ${elements[captain.element].web_name} | النائب: ${elements[vice.element].web_name} | الشريحة: ${chip}`;
+
+    const positions = [1,2,3,4];
+
+    let pitchHTML = "";
+
+    positions.forEach(pos => {
+
+      const group = starters.filter(p => elements[p.element].element_type === pos);
+
+      if (!group.length) return;
+
+      pitchHTML += '<div class="lineup">';
+
+      group.forEach(p => {
+
+        const stats = livePlayers[p.element];
+
+        pitchHTML += playerCard(p, elements[p.element], stats ? stats.total_points : 0, true);
+
+      });
+
+      pitchHTML += '</div>';
+
+    });
+
+    document.getElementById("pitch").innerHTML = pitchHTML;
+
+    let benchHTML = "";
+
+    substitutes.forEach(p => {
+
+      const stats = livePlayers[p.element];
+
+      benchHTML += playerCard(p, elements[p.element], stats ? stats.total_points : 0);
+
+    });
+
+    document.getElementById("bench").innerHTML = benchHTML;
+
+    results.classList.remove("hidden");
+
+    showMessage("تم تحميل بيانات فريقك بنجاح.");
+
+  } catch (error) {
+
+    showMessage(
+
+      "لم نتمكن من تحميل البيانات. قد تكون خدمة فانتازي غير متاحة أو الاتصال محجوباً من المتصفح. جرّب فتح الموقع في Safari أو Chrome. التفاصيل: " + error.message,
+
+      true
+
+    );
+
+  } finally {
+
+    btn.disabled = false;
+
+    btn.textContent = "عرض بيانات الفريق";
+
+  }
+
+}
+
+</script>
+
+</body>
+
+</html>
