@@ -1,397 +1,234 @@
 <!DOCTYPE html>
-
 <html lang="ar" dir="rtl">
-
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>FPL Tracker | فانتازي بريميرليغ</title>
-
 <style>
-
 :root{--bg:#071b16;--panel:#102a22;--green:#00e69a;--muted:#9ab5aa;--white:#f3fff9;--border:#254438}
-
 *{box-sizing:border-box}
-
 body{margin:0;background:var(--bg);color:var(--white);font-family:Arial,Tahoma,sans-serif;padding:18px}
-
 .container{max-width:850px;margin:auto}
-
 header{text-align:center;padding:22px 0}
-
 header h1{color:var(--green);margin:0 0 8px;font-size:30px}
-
 header p{color:var(--muted);margin:0}
-
 .panel,.stat,.player{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:15px}
-
 .panel{margin-bottom:16px}
-
 .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
 label{display:block;color:var(--muted);font-size:13px;margin-bottom:7px}
-
 input{width:100%;padding:13px;border-radius:9px;border:1px solid var(--border);background:#071b16;color:white;font-size:16px}
-
 button{width:100%;padding:14px;border:0;border-radius:10px;background:var(--green);color:#06251b;font-weight:bold;font-size:16px;margin-top:12px;cursor:pointer}
-
 button:disabled{opacity:.6}
-
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
-
 .stat{text-align:center}.stat small{color:var(--muted)}
-
 .stat strong{display:block;font-size:24px;color:var(--green);margin-top:7px}
-
 .section-title{color:var(--green);margin:20px 0 12px}
-
 .pitch{background:linear-gradient(150deg,#176b42,#0b422d);border:2px solid #4a9b69;border-radius:15px;padding:18px 10px}
-
 .lineup{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:12px 0 22px}
-
 .player{width:105px;max-width:30%;padding:9px 5px;text-align:center;background:#092a20;border-color:#75b78c}
-
 .player .shirt{font-size:24px}.player b{display:block;font-size:12px;margin:5px 0}.player small{color:#b8d9c6}
-
 .player .points{color:#ffe28a;font-weight:bold;margin-top:5px}
-
 .bench{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.bench .player{width:auto;max-width:none}
-
 .notice,.error{padding:12px;border-radius:10px;margin:12px 0}
-
 .notice{background:#163629;color:#b9e8d0}.error{background:#4b201e;color:#ffd1cc}
-
 .hidden{display:none}.recommendation{margin-top:18px}
-
 .rec-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-
 .rec-stat{background:#092a20;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
-
 .rec-stat b{display:block;color:var(--green);font-size:20px;margin-top:5px}
-
 .rec-list{display:grid;gap:8px}
-
 .rec-player{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#092a20;border:1px solid var(--border);padding:10px;border-radius:10px}
-
 .rec-player small{display:block;color:var(--muted);margin-top:4px}
-
 .rec-points{color:#ffe28a;font-weight:bold;white-space:nowrap}
-
 .rec-tag{color:var(--green);font-size:12px}
-
 footer{text-align:center;color:var(--muted);font-size:12px;margin:25px 0}
-
 @media(max-width:480px){body{padding:12px}.controls{grid-template-columns:1fr 1fr}.player{width:85px}.bench{grid-template-columns:repeat(2,1fr)}.rec-grid{grid-template-columns:1fr 1fr}}
-
 </style>
-
 </head>
-
 <body>
-
 <div class="container">
-
 <header>
-
 <h1>⚽ FPL TRACKER</h1>
-
 <p>لوحة متابعة فريقك في فانتازي الدوري الإنجليزي</p>
-
 </header>
 
 <div class="panel">
-
  <div class="controls">
-
   <div>
-
    <label for="entry">رقم الفريق (Entry ID)</label>
-
    <input id="entry" type="number" value="11198381">
-
   </div>
-
   <div>
-
    <label for="gameweek">رقم الجولة</label>
-
    <input id="gameweek" type="number" min="1" max="38" value="9">
-
   </div>
-
  </div>
-
  <button id="loadBtn" onclick="loadTeam()">عرض بيانات الفريق</button>
-
  <div id="message"></div>
-
 </div>
 
 <div id="results" class="hidden">
-
  <div class="stats">
-
   <div class="stat"><small>نقاط الجولة</small><strong id="gwPoints">-</strong></div>
-
   <div class="stat"><small>نقاط الموسم</small><strong id="totalPoints">-</strong></div>
-
   <div class="stat"><small>الترتيب العام</small><strong id="overallRank">-</strong></div>
-
   <div class="stat"><small>ترتيب الجولة</small><strong id="gwRank">-</strong></div>
-
  </div>
 
  <div class="panel">
-
   <h3 class="section-title" id="teamName">الفريق</h3>
-
   <div id="teamInfo"></div>
-
   <div id="captainInfo"></div>
-
  </div>
 
  <h3 class="section-title">التشكيلة الأساسية</h3>
-
  <div class="pitch" id="pitch"></div>
 
  <h3 class="section-title">دكة الاحتياط</h3>
-
  <div class="bench" id="bench"></div>
-
 </div>
 
 <div class="panel recommendation">
-
  <h3 class="section-title">🤖 ترشيحات الجولة القادمة</h3>
-
  <p style="color:var(--muted);font-size:13px;line-height:1.7">
-
  يحلل جميع لاعبي الدوري، ويقترح تشكيلة من 15 لاعباً ضمن قيمة فريقك الحالية ورصيد البنك، مع أفضل 11 لاعباً والكابتن والنائب.
-
  </p>
-
  <button id="recommendBtn" onclick="recommendTeam()">حلّل الجولة القادمة</button>
-
  <div id="recommendMessage"></div>
 
  <div id="recommendResults" class="hidden">
-
   <div class="rec-grid" style="margin:12px 0">
-
    <div class="rec-stat"><small>الجولة المستهدفة</small><b id="recGw">-</b></div>
-
    <div class="rec-stat"><small>الميزانية المتاحة</small><b id="recBudget">-</b></div>
-
    <div class="rec-stat"><small>النقاط المتوقعة للأساسيين</small><b id="recPoints">-</b></div>
-
    <div class="rec-stat"><small>الكابتن المقترح</small><b id="recCaptain">-</b></div>
-
   </div>
 
   <h4 class="section-title">التشكيلة الأساسية — أفضل 11</h4>
-
   <div id="recStarting" class="rec-list"></div>
 
   <h4 class="section-title">دكة الاحتياط</h4>
-
   <div id="recBench" class="rec-list"></div>
 
   <p id="recDisclaimer" style="color:var(--muted);font-size:12px;line-height:1.8"></p>
-
  </div>
-
 </div>
 
 <footer>
-
 FPL Tracker — مشروع مستقل غير تابع رسمياً للدوري الإنجليزي أو Fantasy Premier League
-
 </footer>
-
 </div>
 
 <script>
-
 const API="https://proxy.cors.dev/https://fantasy.premierleague.com/api/";
 
 async function getJSON(url){
-
  const response=await fetch(url);
-
  if(!response.ok)throw new Error("تعذر جلب البيانات ("+response.status+").");
-
  return response.json();
-
 }
 
 function showMessage(text,error=false){
-
  const box=document.getElementById("message");
-
  box.className=error?"error":"notice";
-
  box.textContent=text;
-
 }
 
 function playerCard(player,element,points,captain=false){
-
  const name=element.web_name||"لاعب";
-
  const position=({1:"حارس",2:"دفاع",3:"وسط",4:"هجوم"})[element.element_type]||"";
-
  const multiplier=player.multiplier||1;
-
  const score=points*multiplier;
 
  return `
-
  <div class="player">
-
   <div class="shirt">👕</div>
-
   <b>${name}</b>
-
   <small>${position}</small>
-
   ${captain?`<small>⭐ ${player.is_captain?"C":"VC"}</small>`:""}
-
   <div class="points">${score} نقطة</div>
-
  </div>`;
-
 }
 
 async function loadTeam(){
-
  const entry=document.getElementById("entry").value.trim();
-
  const gw=Number(document.getElementById("gameweek").value);
-
  const btn=document.getElementById("loadBtn");
-
  const results=document.getElementById("results");
 
  if(!entry||!Number.isInteger(gw)||gw<1||gw>38){
-
   showMessage("تأكد من رقم الفريق ورقم الجولة.",true);
-
   return;
-
  }
 
  btn.disabled=true;
-
  btn.textContent="جاري تحميل البيانات...";
-
  results.classList.add("hidden");
-
  showMessage("جاري الاتصال بخوادم فانتازي...");
 
  try{
-
   const [team,picksData,bootstrap,live]=await Promise.all([
-
    getJSON(`${API}entry/${entry}/`),
-
    getJSON(`${API}entry/${entry}/event/${gw}/picks/`),
-
    getJSON(`${API}bootstrap-static/`),
-
    getJSON(`${API}event/${gw}/live/`)
-
   ]);
 
   const elements=Object.fromEntries(bootstrap.elements.map(p=>[p.id,p]));
-
   const livePlayers=Object.fromEntries(live.elements.map(p=>[p.id,p.stats]));
-
   const picks=picksData.picks;
 
   const starters=picks.filter(p=>p.position<=11);
-
   const substitutes=picks.filter(p=>p.position>11);
-
   const captain=picks.find(p=>p.is_captain);
-
   const vice=picks.find(p=>p.is_vice_captain);
 
   document.getElementById("gwPoints").textContent=picksData.entry_history.points;
-
   document.getElementById("totalPoints").textContent=team.summary_overall_points.toLocaleString("en");
-
   document.getElementById("overallRank").textContent=team.summary_overall_rank.toLocaleString("en");
-
   document.getElementById("gwRank").textContent=picksData.entry_history.rank.toLocaleString("en");
-
   document.getElementById("teamName").textContent=team.name;
 
   document.getElementById("teamInfo").textContent=
-
    `${team.player_first_name} ${team.player_last_name} — ${team.player_region_name||""}`;
 
   document.getElementById("captainInfo").textContent=
-
    `الكابتن: ${elements[captain.element].web_name} | النائب: ${elements[vice.element].web_name} | الشريحة: ${picksData.active_chip||"لا توجد"}`;
 
   let pitchHTML="";
 
   [1,2,3,4].forEach(pos=>{
-
    const group=starters.filter(p=>elements[p.element].element_type===pos);
-
    if(!group.length)return;
 
    pitchHTML+='<div class="lineup">'+group.map(p=>{
-
     const stats=livePlayers[p.element];
-
     return playerCard(p,elements[p.element],stats?stats.total_points:0,true);
-
    }).join("")+"</div>";
-
   });
 
   document.getElementById("pitch").innerHTML=pitchHTML;
 
   document.getElementById("bench").innerHTML=substitutes.map(p=>{
-
    const stats=livePlayers[p.element];
-
    return playerCard(p,elements[p.element],stats?stats.total_points:0);
-
   }).join("");
 
   results.classList.remove("hidden");
-
   showMessage("تم تحميل بيانات فريقك بنجاح.");
 
  }catch(error){
-
   showMessage("لم نتمكن من تحميل البيانات. جرّب فتح الموقع في Safari. التفاصيل: "+error.message,true);
-
  }finally{
-
   btn.disabled=false;
-
   btn.textContent="عرض بيانات الفريق";
-
  }
-
 }
 
 function expectedPoints(p,difficulty){
-
  let n=Number(p.ep_next);
 
  if(!(n>0)){
-
   n=(Number(p.form)||0)*.6+(Number(p.points_per_game)||0)*.4;
-
  }
 
  if(!(n>0))n=.5;
@@ -399,239 +236,153 @@ function expectedPoints(p,difficulty){
  if(p.status!=="a")n*=.35;
 
  if(p.chance_of_playing_next_round!==null&&p.chance_of_playing_next_round!==undefined){
-
   n*=Math.max(0,Math.min(100,p.chance_of_playing_next_round))/100;
-
  }
 
  if(difficulty){
-
   n*=Math.max(.72,Math.min(1.18,1.12-(difficulty-3)*.08));
-
  }
 
  if((Number(p.minutes)||0)<180)n*=.78;
 
  return Math.max(0,n);
-
 }
 
 function money(n){
-
  return (n/10).toFixed(1)+"m";
-
 }
 
 function recCard(p,tag){
-
  const pos=({1:"حارس",2:"دفاع",3:"وسط",4:"هجوم"})[p.element_type];
 
  return `
-
  <div class="rec-player">
-
   <div>
-
    <b>${p.web_name}</b>
-
    <small>${pos} · ${p.team_name} · ${money(p.now_cost)}
-
    ${tag?` · <span class="rec-tag">${tag}</span>`:""}</small>
-
   </div>
-
   <div class="rec-points">${p.expected.toFixed(1)} متوقعة</div>
-
  </div>`;
-
 }
 
 function buildSquad(players,budget){
-
  const quotas={1:2,2:5,3:5,4:3};
-
  const squad=[];
-
  const club={};
-
  let spent=0;
 
  // بناء تشكيلة قانونية منخفضة التكلفة أولاً
-
  for(const pos of [1,2,3,4]){
-
   const pool=players.filter(p=>p.element_type===pos)
-
    .sort((a,b)=>a.now_cost-b.now_cost||b.expected-a.expected);
 
   for(let i=0;i<quotas[pos];i++){
-
    const pick=pool.find(p=>
-
     !squad.some(x=>x.id===p.id)&&
-
     (club[p.team]||0)<3&&
-
     spent+p.now_cost<=budget*10
-
    );
 
    if(!pick){
-
     throw new Error("تعذّر تكوين تشكيلة قانونية ضمن ميزانيتك. قد تكون الميزانية منخفضة أو بيانات اللاعبين ناقصة.");
-
    }
 
    squad.push(pick);
-
    spent+=pick.now_cost;
-
    club[pick.team]=(club[pick.team]||0)+1;
-
   }
-
  }
 
  // تحسين التشكيلة باستبدال اللاعبين ببدائل أعلى توقعاً
-
  for(let pass=0;pass<4;pass++){
-
   let changed=false;
 
   for(const old of [...squad]){
-
    const options=players.filter(p=>
-
     p.element_type===old.element_type&&
-
     !squad.some(x=>x.id===p.id)&&
-
     p.expected>old.expected+.02
-
    ).sort((a,b)=>
-
     (b.expected-old.expected)/(Math.max(1,b.now_cost-old.now_cost))-
-
     (a.expected-old.expected)/(Math.max(1,a.now_cost-old.now_cost))
-
    );
 
    for(const p of options){
-
     const count=(club[p.team]||0)+(p.team===old.team?0:1);
 
     if(count>3||spent-old.now_cost+p.now_cost>budget*10)continue;
 
     squad[squad.indexOf(old)]=p;
-
     spent+=p.now_cost-old.now_cost;
-
     club[old.team]--;
-
     club[p.team]=(club[p.team]||0)+1;
-
     changed=true;
-
     break;
-
    }
-
   }
 
   if(!changed)break;
-
  }
 
  return {squad,spent};
-
 }
 
 function bestStartingXI(squad){
-
  let best=null;
-
  let bestScore=-1;
 
  const formations=[
-
   [3,4,3],[3,5,2],[4,4,2],[4,5,1],
-
   [4,3,3],[5,2,3],[5,3,2],[5,4,1]
-
  ];
 
  for(const [d,m,f] of formations){
-
   const choose=(pos,n)=>
-
    squad.filter(p=>p.element_type===pos)
-
     .sort((a,b)=>b.expected-a.expected)
-
     .slice(0,n);
 
   const xi=[
-
    ...choose(1,1),
-
    ...choose(2,d),
-
    ...choose(3,m),
-
    ...choose(4,f)
-
   ];
 
   const score=xi.reduce((s,p)=>s+p.expected,0);
 
   if(xi.length===11&&score>bestScore){
-
    best=xi;
-
    bestScore=score;
-
   }
-
  }
 
  if(!best)throw new Error("لم نتمكن من بناء تشكيلة أساسية قانونية.");
 
  return best;
-
 }
 
 async function recommendTeam(){
-
  const btn=document.getElementById("recommendBtn");
-
  const msg=document.getElementById("recommendMessage");
-
  const out=document.getElementById("recommendResults");
 
  btn.disabled=true;
-
  btn.textContent="يجري تحليل اللاعبين...";
-
  out.classList.add("hidden");
-
  msg.className="notice";
-
  msg.textContent="نجمع بيانات اللاعبين والمباريات وميزانيتك...";
 
  try{
-
   const entry=document.getElementById("entry").value.trim();
 
   if(!entry)throw new Error("أدخل رقم فريقك أولاً.");
 
   const [team,boot,fixtures]=await Promise.all([
-
    getJSON(API+"entry/"+entry+"/"),
-
    getJSON(API+"bootstrap-static/"),
-
    getJSON(API+"fixtures/")
-
   ]);
 
   const next=boot.events.find(e=>e.is_next)||boot.events.find(e=>!e.finished);
@@ -641,45 +392,30 @@ async function recommendTeam(){
   const difficulty={};
 
   fixtures.filter(f=>f.event===next.id).forEach(f=>{
-
    difficulty[f.team_h]=Math.min(difficulty[f.team_h]||5,f.team_h_difficulty);
-
    difficulty[f.team_a]=Math.min(difficulty[f.team_a]||5,f.team_a_difficulty);
-
   });
 
   const clubNames=Object.fromEntries(boot.teams.map(t=>[t.id,t.name]));
 
   const players=boot.elements.map(p=>({
-
    ...p,
-
    team_name:clubNames[p.team]||"—",
-
    expected:expectedPoints(p,difficulty[p.team])
-
   })).filter(p=>
-
    p.status!=="u"&&p.status!=="s"&&p.now_cost>0
-
   );
 
   const budget=(Number(team.value)+Number(team.bank))/10;
 
   const {squad,spent}=buildSquad(players,budget);
-
   const xi=bestStartingXI(squad);
 
   const bench=squad.filter(p=>!xi.some(x=>x.id===p.id))
-
    .sort((a,b)=>
-
     a.element_type===1?-1:
-
     b.element_type===1?1:
-
     b.expected-a.expected
-
    );
 
   const orderedXI=xi.sort((a,b)=>a.element_type-b.element_type);
@@ -687,69 +423,45 @@ async function recommendTeam(){
   const captain=[...xi].sort((a,b)=>b.expected-a.expected)[0];
 
   const vice=[...xi]
-
    .filter(p=>p.id!==captain.id)
-
    .sort((a,b)=>b.expected-a.expected)[0];
 
   document.getElementById("recGw").textContent=next.id;
 
   document.getElementById("recBudget").textContent=
-
    money(budget)+" (المستخدم "+money(spent)+")";
 
   document.getElementById("recPoints").textContent=
-
    xi.reduce((s,p)=>s+p.expected,0).toFixed(1);
 
   document.getElementById("recCaptain").textContent=captain.web_name;
 
   document.getElementById("recStarting").innerHTML=
-
    orderedXI.map(p=>recCard(
-
     p,
-
     p.id===captain.id?"كابتن":
-
     p.id===vice.id?"نائب":"أساسي"
-
    )).join("");
 
   document.getElementById("recBench").innerHTML=
-
    bench.map((p,i)=>recCard(p,i===0?"الأول":"احتياط")).join("");
 
   document.getElementById("recDisclaimer").textContent=
-
    "النائب المقترح: "+vice.web_name+
-
    ". التوقعات تقريبية وليست ضماناً، وتعتمد على ep_next أو form ومعدل النقاط وصعوبة المباراة وحالة اللاعب. هذه تشكيلة كاملة بديلة ضمن قيمة فريقك ورصيد البنك، وليست توصية بعدد انتقالاتك المجانية. راجع أخبار الإصابات والتشكيلات قبل إغلاق الجولة.";
 
   out.classList.remove("hidden");
-
   msg.className="notice";
-
   msg.textContent="اكتمل تحليل الجولة "+next.id+".";
 
  }catch(e){
-
   msg.className="error";
-
   msg.textContent="تعذر إنشاء الترشيحات: "+e.message;
-
  }finally{
-
   btn.disabled=false;
-
   btn.textContent="إعادة تحليل الجولة القادمة";
-
  }
-
 }
-
 </script>
-
 </body>
-
 </html>
