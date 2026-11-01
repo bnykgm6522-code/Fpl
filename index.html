@@ -224,19 +224,13 @@ footer {text-align:center;color:var(--muted);font-size:12px;margin:25px 0}
 
 <script>
 
-const API = "https://fantasy.premierleague.com/api/";
+const API = "https://proxy.cors.dev/https://fantasy.premierleague.com/api/";
 
 async function getJSON(url) {
-  const proxyURL =
-    "https://corsproxy.io/?url=" + encodeURIComponent(url);
-
-  const response = await fetch(proxyURL);
-
-  if (!response.ok) {
-    throw new Error("HTTP " + response.status);
-  }
-
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("تعذر جلب البيانات.");
   return response.json();
+}
 }
 
 }
