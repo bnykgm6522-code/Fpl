@@ -439,7 +439,10 @@ async function recommendTeam(){
    p.status!=="u"&&p.status!=="s"&&p.now_cost>0
   );
 
-  const budget=(Number(team.value)+Number(team.bank))/10;
+const budget=(
+  Number(team.last_deadline_value)+
+  Number(team.last_deadline_bank)
+)/10;
 
   const {squad,spent}=buildSquad(players,budget);
   const xi=bestStartingXI(squad);
